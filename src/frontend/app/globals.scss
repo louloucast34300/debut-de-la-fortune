@@ -1,0 +1,37 @@
+// Variables
+$color-background: #ffffff;
+$color-foreground: #171717;
+$font-sans: Arial, Helvetica, sans-serif;
+
+:root {
+  --background: #{$color-background};
+  --foreground: #{$color-foreground};
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: $font-sans;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
