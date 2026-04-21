@@ -35,3 +35,6 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
+
+// auth 
+@import "./domains/auth/register/register.scss"

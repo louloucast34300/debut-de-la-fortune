@@ -1,3 +1,6 @@
 {
-    "folder-color.pathColors": []
+    "folder-color.pathColors": [],
+    "files.exclude": {
+        "**/__pycache__":true
+    }
 }

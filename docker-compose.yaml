@@ -21,6 +21,8 @@ services:
     restart: unless-stopped
     volumes:
       - ./src/backend:/home/code
+    env_file:
+      - ./src/backend/.env
     networks:
       - fortune-network
     ports:
@@ -33,7 +35,7 @@ services:
     environment:
       POSTGRES_USER: admin@admin.com
       POSTGRES_PASSWORD: password
-      POSTGRES_DB: larvahub
+      POSTGRES_DB: fortune
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
