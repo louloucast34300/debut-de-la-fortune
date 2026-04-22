@@ -2,13 +2,13 @@
 import {useRef} from 'react'
 import {register_action} from "./register.server"
 
-export default function Register() {
-    const form = useRef<HTMLFormElement>(null)
+export default function RegisterForm() {
+    const formRef = useRef<HTMLFormElement>(null)
 
 
     async function handleSubmit(){
-        if (form.current) {
-            const formData = new FormData(form.current)
+        if (formRef.current) {
+            const formData = new FormData(formRef.current)
             console.log(Object.fromEntries(formData));
             try{
                 const response = await register_action(formData)
@@ -20,7 +20,7 @@ export default function Register() {
 
     return (
         <div className="register">
-            <form ref={form}>
+            <form ref={formRef}>
                 <div>
                     <label>pseudo</label>
                     <input type="text" name="pseudo" defaultValue={"le boss"}/>

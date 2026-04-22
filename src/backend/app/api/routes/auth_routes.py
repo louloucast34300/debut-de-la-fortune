@@ -1,22 +1,20 @@
-import uuid
-from fastapi import APIRouter, Request, Depends
-from fastapi.responses import JSONResponse
-
+from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from core.db import get_db
-from api.models.auth_orm import User
-from api.schemas.auth_types import RegisterRequest
+from api.schemas.auth_types import RegisterRequest, LoginRequest
+from api.services.auth_service import AuthService
+
+auth_service = AuthService()
 router = APIRouter()
 
 
 @router.post("/register", status_code=201)
 async def register(request: RegisterRequest, db: AsyncSession = Depends(get_db)):
-    print("toto",request.pseudo)
-    db.add(User(
-        id=uuid.uuid4(),
-        email=request.email,
-        password=request.password,
-        pseudo=request.pseudo
-    ))
-    await db.commit()
-    return {"success": True}
+    return await auth_service.registerUser(db=db, data=request)
+
+
+@router.post("/login", status_code=201)
+async def login(request: LoginRequest, db: AsyncSession = Depends(get_db)):
+    return await auth_service.loginUser(db=db, data=request)
+    
+
