@@ -11,8 +11,33 @@ passlib[bcrypt]>=1.7.4
 
 ## Tokens
 
-- **`access_token`** (JWT) — durée courte (15 min), envoyé en header `Authorization: Bearer <token>`. Vérifié par signature, **pas stocké en BDD**.
-- **`refresh_token`** — durée longue (7-30j), stocké en BDD dans la table `sessions`. Sert uniquement à obtenir un nouvel `access_token`.
+### access_token (JWT)
+- Durée courte : **15 min**
+- Envoyé par le client à chaque requête protégée dans le header : `Authorization: Bearer <token>`
+- **Pas stocké en BDD** — c'est l'intérêt du JWT
+- Le token contient les données directement encodées en base64 (user_id, expiration...) et est **signé** avec une `SECRET_KEY` connue uniquement du serveur
+- Vérification côté serveur :
+  ```python
+  payload = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
+  # signature invalide ou token expiré → exception automatique
+  # sinon → payload["user_id"] est garanti authentique
+  ```
+- La cryptographie garantit que si la signature est valide, c'est forcément le serveur qui a émis ce token — aucun lookup BDD nécessaire
+- ⚠️ Inconvénient : si le token est volé, il reste valide jusqu'à expiration (d'où la durée courte de 15 min)
+
+### refresh_token
+- Durée longue : **30 jours**
+- Stocké en BDD dans la table `sessions`
+- Sert **uniquement** à obtenir un nouvel `access_token` quand celui-ci expire
+- Révocable instantanément : un simple `DELETE` en BDD l'invalide (logout, suspicion de vol...)
+
+### Comparaison
+
+| | `access_token` (JWT) | `refresh_token` |
+|---|---|---|
+| Vérification | Signature crypto, pas de BDD | Lookup en BDD |
+| Durée | 15 min | 30 jours |
+| Révocable instantanément | ❌ Non | ✅ Oui (DELETE en BDD) |
 
 ---
 

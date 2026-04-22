@@ -1,0 +1,58 @@
+# CLAUDE.md — Conventions du projet
+
+## Stack
+
+- **Frontend** : Next.js (TypeScript)
+- **Backend** : FastAPI (Python 3.12)
+- **BDD** : PostgreSQL (via SQLAlchemy async + asyncpg)
+- **Orchestration** : Docker Compose
+
+---
+
+## Architecture Backend (`src/backend/app/`)
+
+```
+app/
+  api/
+    routes/       ← routes FastAPI (HTTP uniquement, délègue aux services)
+    models/
+      orm/        ← modèles SQLAlchemy (mapping BDD)
+      types/      ← modèles Pydantic (validation requêtes/réponses)
+  core/           ← config, connexion BDD, dépendances FastAPI (get_db...)
+  domain/         ← logique métier pure (classes Game, Player, PenduGame...)
+                     aucun import SQLAlchemy ou FastAPI ici
+  services/       ← orchestration : charge l'état BDD, appelle le domaine, sauvegarde
+  utils/          ← fonctions utilitaires pures sans état
+  main.py         ← point d'entrée FastAPI
+```
+
+### Règles
+- Les routes ne contiennent pas de logique métier — elles délèguent aux services
+- Le domaine ne sait pas que FastAPI ou SQLAlchemy existent
+- Les imports sont absolus (pas de `from .module import ...`), la racine est `app/`
+
+---
+
+## Architecture Frontend (`src/frontend/app/`)
+
+```
+app/
+  features/       ← une feature = un dossier (auth, game, profile...)
+    auth/
+      register/
+        register.tsx          ← composant principal
+        register.server.ts    ← server actions Next.js
+        register.schema.ts    ← validation (zod)
+        register.type.ts      ← types TypeScript
+        register.scss         ← styles
+        atomic/               ← sous-composants si la feature est découpée
+  (pages)/        ← pages Next.js (App Router)
+  styles/         ← styles globaux
+  layout.tsx
+  page.tsx
+```
+
+### Règles
+- Chaque feature contient tous ses fichiers au même endroit (colocation)
+- Si un composant de `atomic/` devient réutilisable entre features, il migre vers un dossier `components/` global
+- Les appels API vers le backend se font dans les fichiers `.server.ts` (server actions)

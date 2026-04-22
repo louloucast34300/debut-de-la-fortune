@@ -1,4 +1,4 @@
-import Register from "@/app/domains/auth/register/register";
+import Register from "@/app/features/auth/register/register";
 
 
 export default function RegisterPage() {

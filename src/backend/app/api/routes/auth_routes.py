@@ -4,8 +4,8 @@ from fastapi.responses import JSONResponse
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from core.db import get_db
-from api.models.orm.auth_orm import User
-from api.models.types.auth_types import RegisterRequest
+from api.models.auth_orm import User
+from api.schemas.auth_types import RegisterRequest
 router = APIRouter()
 
 
