@@ -1,49 +1,124 @@
-# Plan — Système d'authentification
+# Authentification — Documentation
 
-## Dépendances à ajouter dans requirements.txt
+## Stack
 
-```
-PyJWT>=2.8.0
-passlib[bcrypt]>=1.7.4
-```
+- **PyJWT** : génération et décodage des JWT
+- **passlib[bcrypt]** : hashage des mots de passe
+- **SQLAlchemy async** : persistance des sessions
 
 ---
 
 ## Tokens
 
 ### access_token (JWT)
-- Durée courte : **15 min**
-- Envoyé par le client à chaque requête protégée dans le header : `Authorization: Bearer <token>`
-- **Pas stocké en BDD** — c'est l'intérêt du JWT
-- Le token contient les données directement encodées en base64 (user_id, expiration...) et est **signé** avec une `SECRET_KEY` connue uniquement du serveur
-- Vérification côté serveur :
-  ```python
-  payload = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
-  # signature invalide ou token expiré → exception automatique
-  # sinon → payload["user_id"] est garanti authentique
-  ```
-- La cryptographie garantit que si la signature est valide, c'est forcément le serveur qui a émis ce token — aucun lookup BDD nécessaire
-- ⚠️ Inconvénient : si le token est volé, il reste valide jusqu'à expiration (d'où la durée courte de 15 min)
+- Durée : **1h**
+- Payload : `sub` (user UUID), `pseudo`, `exp`, `iat`
+- Signé avec `SECRET_KEY` (HS256)
+- **Non stocké en BDD** — vérification cryptographique uniquement
+- Stocké côté client en cookie `httpOnly`
 
-### refresh_token
-- Durée longue : **30 jours**
+### refresh_token (JWT)
+- Durée : **30 jours**
+- Payload : `sub` (user UUID), `exp`
 - Stocké en BDD dans la table `sessions`
-- Sert **uniquement** à obtenir un nouvel `access_token` quand celui-ci expire
-- Révocable instantanément : un simple `DELETE` en BDD l'invalide (logout, suspicion de vol...)
+- Révocable instantanément par DELETE en BDD
+- Stocké côté client en cookie `httpOnly`
 
 ### Comparaison
 
-| | `access_token` (JWT) | `refresh_token` |
+| | `access_token` | `refresh_token` |
 |---|---|---|
 | Vérification | Signature crypto, pas de BDD | Lookup en BDD |
-| Durée | 15 min | 30 jours |
-| Révocable instantanément | ❌ Non | ✅ Oui (DELETE en BDD) |
+| Durée | 1h | 30 jours |
+| Révocable | ❌ Non | ✅ Oui (DELETE) |
+| Stocké en BDD | ❌ Non | ✅ Oui |
 
 ---
 
-## Table `sessions` à créer
+## Logique du service (`AuthService`)
+
+### `registerUser`
+1. Hasher le password (`generate_new_salt`)
+2. Générer `access_token` + `refresh_token` avant l'insertion
+3. `db.add(User)` → `flush()` — insère le user en BDD sans clore la transaction (nécessaire pour satisfaire la FK de Session)
+4. `db.add(Session)` → `commit()`
+5. Gestion d'erreurs dans le `try/catch` global :
+   - `IntegrityError` : email déjà utilisé (contrainte UNIQUE)
+   - `Exception` : erreur BDD générique → rollback
+
+```python
+try:
+    db.add(User(...))
+    await db.flush()   # ← obligatoire avant Session (FK user_id)
+    db.add(Session(...))
+    await db.commit()
+except IntegrityError:
+    await db.rollback()
+except Exception:
+    await db.rollback()
+```
+
+### `loginUser`
+1. Chercher le user par email (early return si absent)
+2. Vérifier le password hashé (early return si incorrect)
+3. Générer `access_token` + `refresh_token`
+4. Insérer une nouvelle `Session` en BDD
+5. Retourner les deux tokens
+
+### `logoutUser`
+1. Chercher la session par `refresh_token` (early return si absente)
+2. `db.delete(session)` → `commit()`
+3. La session est invalidée instantanément
+
+### `refreshTokens`
+1. Chercher la session par `refresh_token` (early return si absente)
+2. Vérifier `expires_at > now()` (early return si expirée)
+3. Charger le user depuis `session.user_id`
+4. Générer un nouveau `access_token` + `refresh_token` (rotation)
+5. Mettre à jour `session.refresh_token` et `session.expires_at` sur la ligne existante
+6. Retourner les deux tokens
+
+---
+
+## Proxy Next.js (`proxy.ts`)
+
+S'exécute avant chaque page protégée (sauf `/register` et assets).
+
+```
+requête
+    ↓
+proxy.ts
+    ↓
+header `next-action` présent ? → laisser passer (server actions)
+    ↓
+access_token présent ?
+    ├── non → redirect /register
+    └── oui → expiré ?
+               ├── non → laisser passer
+               └── oui → refresh_token présent ?
+                          ├── non → redirect /register
+                          └── oui → POST /auth/refresh
+                                     ├── succès → set cookies → laisser passer
+                                     └── échec → redirect /register
+```
+
+> Le proxy appelle le backend **directement** (pas via server action) pour pouvoir poser les cookies sur le `NextResponse`.
+
+> `jwtDecode` lit le payload JWT sans vérifier la signature — pas besoin de `SECRET_KEY` côté frontend.
+
+---
+
+## Tables BDD
 
 ```sql
+CREATE TABLE users (
+    id UUID PRIMARY KEY,
+    pseudo TEXT,
+    email TEXT UNIQUE NOT NULL,
+    password TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 CREATE TABLE sessions (
     id UUID PRIMARY KEY,
     user_id UUID REFERENCES users(id) ON DELETE CASCADE,
@@ -55,142 +130,63 @@ CREATE TABLE sessions (
 
 ---
 
-## Flux
+## Vérification du Bearer Token sur les routes protégées
 
-### Register
-- Hasher le password avec `passlib[bcrypt]` avant l'INSERT en BDD.
+FastAPI utilise une **dépendance** injectée dans les routes. Elle lit le header `Authorization: Bearer <token>`, vérifie la signature et l'expiration, et injecte le payload dans la route.
 
-### Login
-1. Récupérer le user par email
-2. Vérifier le password hashé (`passlib.verify`)
-3. Générer `access_token` (JWT, exp 15min) + `refresh_token` (UUID ou JWT, exp 30j)
-4. INSERT dans `sessions` (user_id, refresh_token, expires_at)
-5. Retourner les deux tokens
+```python
+# core/dependencies.py
+import jwt
+from fastapi import Depends, HTTPException, Security
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from app.config import SECRET_KEY
 
-### Requête protégée
-1. Client envoie `Authorization: Bearer <access_token>`
-2. FastAPI vérifie la signature JWT (via `PyJWT`)
-3. Si valide → accès autorisé (pas de requête BDD)
+bearer_scheme = HTTPBearer()
 
-### Refresh
-1. Client envoie le `refresh_token`
-2. FastAPI cherche la session en BDD : `SELECT * FROM sessions WHERE refresh_token = $1 AND expires_at > NOW()`
-3. Si trouvée → générer un nouvel `access_token`
-
-### Logout
-1. DELETE de la ligne dans `sessions` correspondant au `refresh_token`
-2. Le `refresh_token` est invalidé immédiatement
-
----
-
-## Proxy Next.js — Protection des routes
-
-### Flux logique
-
-```
-requête vers /page-protégée
-        ↓
-proxy Next.js (proxy.ts)
-        ↓
-access_token présent ?
-   ├── non → redirect /login
-   └── oui → expiré ?
-              ├── non → laisse passer
-              └── oui → refresh_token présent ?
-                         ├── non → redirect /login
-                         └── oui → appelle POST /auth/refresh
-                                    ├── succès → set nouveau cookie access_token → laisse passer
-                                    └── échec (refresh expiré) → redirect /login
+def get_current_user(credentials: HTTPAuthorizationCredentials = Security(bearer_scheme)):
+    token = credentials.credentials  # extrait le token du header
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
+        return payload  # {"sub": "uuid", "pseudo": "...", "exp": ...}
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Token expiré")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Token invalide")
 ```
 
-### Décoder le JWT sans SECRET_KEY
-
-Un JWT est composé de `header.payload.signature` encodés en base64. Le payload est **public** — n'importe qui peut le décoder sans la clé. La `SECRET_KEY` sert uniquement à **générer et vérifier la signature** côté backend.
-
-Le proxy se contente de lire l'expiration pour décider quoi faire — la vraie vérification cryptographique se fait quand la requête atteint une route FastAPI protégée.
-
-```ts
-// proxy.ts
-import { jwtDecode } from 'jwt-decode'
-import { NextRequest, NextResponse } from 'next/server'
-
-export async function proxy(request: NextRequest) {
-    const accessToken = request.cookies.get('access_token')?.value
-    const refreshToken = request.cookies.get('refresh_token')?.value
-
-    // Pas de token → redirect login
-    if (!accessToken) {
-        return NextResponse.redirect(new URL('/login', request.url))
-    }
-
-    // Vérifier l'expiration sans appel réseau
-    const { exp } = jwtDecode<{ exp: number }>(accessToken)
-    const isExpired = Date.now() >= exp * 1000
-
-    if (!isExpired) {
-        return NextResponse.next()
-    }
-
-    // access_token expiré → tenter le refresh
-    if (!refreshToken) {
-        return NextResponse.redirect(new URL('/login', request.url))
-    }
-
-    const res = await fetch(`${process.env.BACKEND_URL}/api/v1/auth/refresh`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ refresh_token: refreshToken })
-    })
-
-    if (!res.ok) {
-        return NextResponse.redirect(new URL('/login', request.url))
-    }
-
-    const { access_token } = await res.json()
-    const response = NextResponse.next()
-    response.cookies.set('access_token', access_token, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
-        maxAge: 60 * 60
-    })
-    return response
-}
-
-export const config = {
-    matcher: ['/session/:path*'] // routes à protéger
-}
+```python
+# utilisation dans une route protégée
+@router.get("/game")
+async def get_game(current_user = Depends(get_current_user)):
+    user_id = current_user["sub"]
+    ...
 ```
 
----
-
-## "Est connecté ?"
-
-```sql
-SELECT 1 FROM sessions WHERE user_id = $1 AND expires_at > NOW();
-```
+**Ce qui se passe :**
+1. FastAPI lit automatiquement `Authorization: Bearer <token>`
+2. `jwt.decode()` vérifie la **signature** (SECRET_KEY) ET l'**expiration** — exception si invalide
+3. Si valide → payload injecté dans la route, pas de requête BDD
+4. Si invalide → `401` automatique
 
 ---
 
 ## TODO
 
 ### Backend
-- [x] Ajouter `PyJWT>=2.8.0` et `passlib[bcrypt]>=1.7.4` dans `requirements.txt`
-- [x] Hasher le password au register
-- [x] Créer la table `sessions` dans `create_tables.sh`
-- [x] Créer le modèle ORM `Session`
+- [x] `PyJWT`, `passlib[bcrypt]` dans `requirements.txt`
+- [x] Hashage du password au register
+- [x] Table `sessions`
+- [x] Modèle ORM `Session`
+- [x] Route `POST /auth/register`
 - [x] Route `POST /auth/login`
-- [x] Génération des tokens `access_token` + `refresh_token`
-- [ ] Route `POST /auth/refresh`
-- [ ] Route `POST /auth/logout`
-- [ ] Middleware / dépendance FastAPI pour vérifier l'`access_token` sur les routes protégées
+- [x] Route `POST /auth/logout`
+- [x] Route `POST /auth/refresh`
+- [ ] Dépendance FastAPI pour vérifier l'`access_token` sur les routes protégées (middleware pour le bearer)
 
 ### Frontend
-- [x] Formulaire de register
-- [x] Server action register
-- [x] Formulaire de login
-- [x] Server action login + stockage des tokens en cookies `httpOnly`
-- [ ] Server action logout (supprime les cookies + appelle `/auth/logout`)
-- [ ] Server action refresh (appelle `/auth/refresh` avec le `refresh_token`)
-- [ ] Redirection après login/register vers la page protégée
-- [ ] Middleware Next.js pour protéger les routes (vérifier la présence de l'`access_token`)
+- [x] Formulaire register + server action
+- [x] Formulaire login + server action + cookies `httpOnly`
+- [x] Server action logout
+- [x] Proxy `proxy.ts` avec refresh automatique
+- [ ] Redirection post-login vers la page de jeu
+

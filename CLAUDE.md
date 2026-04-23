@@ -31,6 +31,49 @@ app/
 - Le domaine ne sait pas que FastAPI ou SQLAlchemy existent
 - Les imports sont absolus (pas de `from .module import ...`), la racine est `app/`
 
+### Conventions pour un service (`services/`)
+
+Un service est une classe qui orchestre les interactions BDD et retourne toujours un dict `{"success": bool, "message": str, ...}`.
+
+**Pattern early return** : traiter les cas d'erreur en haut, le chemin nominal coule sans imbrication.
+
+```python
+async def monService(self, db: AsyncSession, data: MonSchema):
+    result = await db.execute(select(User).where(...))
+    user = result.scalar_one_or_none()
+    if not user:
+        return {"success": False, "message": "Non trouvé"}
+
+    # chemin nominal sans else
+    ...
+    return {"success": True, ...}
+```
+
+**Gestion des écritures BDD** : toujours wrapper dans `try/except` avec `rollback()`.
+
+```python
+try:
+    db.add(...)
+    await db.commit()
+except IntegrityError as e:
+    await db.rollback()
+    return {"success": False, "message": "Contrainte BDD violée"}
+except Exception as e:
+    await db.rollback()
+    return {"success": False, "message": "Erreur BDD"}
+```
+
+**Ordre d'insertion avec FK** : utiliser `flush()` pour insérer le parent avant l'enfant dans la même transaction.
+
+```python
+try:
+    db.add(Parent(...))
+    await db.flush()   # rend le parent visible pour la FK
+    db.add(Enfant(parent_id=parent_id, ...))
+    await db.commit()
+except ...
+```
+
 ---
 
 ## Architecture Frontend (`src/frontend/app/`)
