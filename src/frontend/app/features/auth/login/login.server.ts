@@ -38,27 +38,29 @@ export async function login_action(formData:FormData){
 
 
 export async function logout_action(){
+
     const url = `${process.env.BACKEND_URL}/api/v1/auth/logout`
     const cookieStore = await cookies()
     const refresh_token = cookieStore.get('refresh_token')?.value
 
-    try{
-        const response = await fetch(url,{
-            method:'POST',
-            headers:{'Content-Type':'application/json'},
-            body:JSON.stringify({ refresh_token })
-        })
-        const data = await response.json()
-        if(data.success){
-            cookieStore.delete("access_token")
-            cookieStore.delete("refresh_token")
-        }else{
-            return {"success":false, "message":data.message}
+    cookieStore.delete("access_token")
+    cookieStore.delete("refresh_token")
+
+    if(refresh_token){
+
+        try{
+            console.log("ici")
+            await fetch(url,{
+                method:'POST',
+                headers:{'Content-Type':'application/json'},
+                body:JSON.stringify({ refresh_token })
+            })
+        }catch(e){
+            const errorMessage = e instanceof Error ? e.message : String(e)
+            return {"success":false, "message":errorMessage}
         }
-    }catch(e){
-        const errorMessage = e instanceof Error ? e.message : String(e)
-        return {"success":false, "message":errorMessage}
     }
     redirect("/register", RedirectType.push)
 }
+
       

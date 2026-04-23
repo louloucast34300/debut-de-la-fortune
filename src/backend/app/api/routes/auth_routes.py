@@ -24,10 +24,5 @@ async def logout(request: LogoutRequest, db:AsyncSession = Depends(get_db)):
 
 @router.post("/refresh", status_code=201)
 async def refresh(request: RefreshRequest, db:AsyncSession = Depends(get_db)):
-    # request=refresh_token
-    # on récupère en bdd le user (session user_id -> user)
-    # on génère un nouveau refresh_token et un access_token 
-    # on restocke le refresh_token + expires_at en bdd sur la même ligne
-    # on renvoit refresh + access au server_action pour update cookies
-    pass
+    return await auth_service.refreshTokens(db=db, token=request)
 
