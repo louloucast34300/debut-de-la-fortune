@@ -83,6 +83,87 @@ CREATE TABLE sessions (
 
 ---
 
+## Proxy Next.js — Protection des routes
+
+### Flux logique
+
+```
+requête vers /page-protégée
+        ↓
+proxy Next.js (proxy.ts)
+        ↓
+access_token présent ?
+   ├── non → redirect /login
+   └── oui → expiré ?
+              ├── non → laisse passer
+              └── oui → refresh_token présent ?
+                         ├── non → redirect /login
+                         └── oui → appelle POST /auth/refresh
+                                    ├── succès → set nouveau cookie access_token → laisse passer
+                                    └── échec (refresh expiré) → redirect /login
+```
+
+### Décoder le JWT sans SECRET_KEY
+
+Un JWT est composé de `header.payload.signature` encodés en base64. Le payload est **public** — n'importe qui peut le décoder sans la clé. La `SECRET_KEY` sert uniquement à **générer et vérifier la signature** côté backend.
+
+Le proxy se contente de lire l'expiration pour décider quoi faire — la vraie vérification cryptographique se fait quand la requête atteint une route FastAPI protégée.
+
+```ts
+// proxy.ts
+import { jwtDecode } from 'jwt-decode'
+import { NextRequest, NextResponse } from 'next/server'
+
+export async function proxy(request: NextRequest) {
+    const accessToken = request.cookies.get('access_token')?.value
+    const refreshToken = request.cookies.get('refresh_token')?.value
+
+    // Pas de token → redirect login
+    if (!accessToken) {
+        return NextResponse.redirect(new URL('/login', request.url))
+    }
+
+    // Vérifier l'expiration sans appel réseau
+    const { exp } = jwtDecode<{ exp: number }>(accessToken)
+    const isExpired = Date.now() >= exp * 1000
+
+    if (!isExpired) {
+        return NextResponse.next()
+    }
+
+    // access_token expiré → tenter le refresh
+    if (!refreshToken) {
+        return NextResponse.redirect(new URL('/login', request.url))
+    }
+
+    const res = await fetch(`${process.env.BACKEND_URL}/api/v1/auth/refresh`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refresh_token: refreshToken })
+    })
+
+    if (!res.ok) {
+        return NextResponse.redirect(new URL('/login', request.url))
+    }
+
+    const { access_token } = await res.json()
+    const response = NextResponse.next()
+    response.cookies.set('access_token', access_token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        maxAge: 60 * 60
+    })
+    return response
+}
+
+export const config = {
+    matcher: ['/session/:path*'] // routes à protéger
+}
+```
+
+---
+
 ## "Est connecté ?"
 
 ```sql
@@ -93,11 +174,23 @@ SELECT 1 FROM sessions WHERE user_id = $1 AND expires_at > NOW();
 
 ## TODO
 
-- [ ] Ajouter `PyJWT>=2.8.0` et `passlib[bcrypt]>=1.7.4` dans `requirements.txt`
-- [ ] Hasher le password au register
-- [ ] Créer la table `sessions` dans `create_tables.sh`
-- [ ] Créer le modèle ORM `Session`
-- [ ] Route `POST /auth/login`
+### Backend
+- [x] Ajouter `PyJWT>=2.8.0` et `passlib[bcrypt]>=1.7.4` dans `requirements.txt`
+- [x] Hasher le password au register
+- [x] Créer la table `sessions` dans `create_tables.sh`
+- [x] Créer le modèle ORM `Session`
+- [x] Route `POST /auth/login`
+- [x] Génération des tokens `access_token` + `refresh_token`
 - [ ] Route `POST /auth/refresh`
 - [ ] Route `POST /auth/logout`
 - [ ] Middleware / dépendance FastAPI pour vérifier l'`access_token` sur les routes protégées
+
+### Frontend
+- [x] Formulaire de register
+- [x] Server action register
+- [x] Formulaire de login
+- [x] Server action login + stockage des tokens en cookies `httpOnly`
+- [ ] Server action logout (supprime les cookies + appelle `/auth/logout`)
+- [ ] Server action refresh (appelle `/auth/refresh` avec le `refresh_token`)
+- [ ] Redirection après login/register vers la page protégée
+- [ ] Middleware Next.js pour protéger les routes (vérifier la présence de l'`access_token`)

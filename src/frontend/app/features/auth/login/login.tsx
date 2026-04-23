@@ -11,9 +11,9 @@ export default function LoginForm() {
             const formData = new FormData(formRef.current)
             try{
                 const response = await login_action(formData)
-                console.log(response.success, response.message)
+                console.log(response)
             }catch(e){
-
+                
             }
         }
     }

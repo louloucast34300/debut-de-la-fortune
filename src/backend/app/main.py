@@ -1,5 +1,6 @@
 from fastapi import FastAPI, APIRouter
 from api.routes.auth_routes import router as auth_router
+import os
 
 api_prefix = "/api/v1"
 if api_prefix == "/":
