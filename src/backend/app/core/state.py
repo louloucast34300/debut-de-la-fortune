@@ -2,7 +2,7 @@ from dataclasses import dataclass
 import uuid
 
 # user_ids en attente — vit pour toute la durée du serveur
-queue: list[str] = ["123", "456"]
+queue: list[str] = []
 
 @dataclass
 class PendingMatch:

@@ -52,7 +52,7 @@ class AuthService():
 
     async def loginUser(self, db: AsyncSession, data: LoginRequest):
         result = await db.execute(select(User).where(User.email == data.email))
-        user: User = result.scalar_one_or_none()
+        user: User | None = result.scalar_one_or_none()
 
         if not user:
             return {"success": False, "message": "Email non trouvé"}
@@ -89,7 +89,7 @@ class AuthService():
     
     async def logoutUser(self, db:AsyncSession, token:LogoutRequest):
         result = await db.execute(select(Session).where(Session.refresh_token == token.refresh_token))
-        session:Session = result.scalar_one_or_none()
+        session:Session | None = result.scalar_one_or_none()
         if not session:
             return {"success": False, "message": "Session non trouvée."}
 
@@ -109,7 +109,7 @@ class AuthService():
     
     async def refreshTokens(self, db:AsyncSession, token:RefreshRequest):
         result = await db.execute(select(Session).where(Session.refresh_token == token.refresh_token))
-        session:Session = result.scalar_one_or_none()
+        session:Session | None = result.scalar_one_or_none()
 
         if not session:
             return {"success": False, "message": "Session non trouvée"}
@@ -118,7 +118,7 @@ class AuthService():
             return {"success": False, "message": "Session expirée"}
 
         result_user = await db.execute(select(User).where(User.id == session.user_id))
-        user:User = result_user.scalar_one_or_none()
+        user:User | None = result_user.scalar_one_or_none()
 
         if not user:
             return {"success": False, "message": "Utilisateur non trouvé"}
