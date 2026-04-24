@@ -32,7 +32,7 @@ export async function register_action(formData:FormData){
         const errorMessage = e instanceof Error ? e.message : String(e)
         return {"success":false, "message":errorMessage}
     }
-    redirect("/", RedirectType.push)
+    redirect("/root/dashboard", RedirectType.push)
 }
 
 export async function get_user_action(){
@@ -42,6 +42,7 @@ export async function get_user_action(){
     try{
         const response = await fetch(url, {
             method: 'GET',
+            cache: 'no-store',
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${access_token}`
@@ -51,6 +52,7 @@ export async function get_user_action(){
         if(!data.success){
             return {"success":false, "message":data.message}
         }
+        data.data.access_token = access_token
         return data
     }catch(e){
         const errorMessage = e instanceof Error ? e.message : String(e)

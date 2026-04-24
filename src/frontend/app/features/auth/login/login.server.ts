@@ -33,7 +33,7 @@ export async function login_action(formData: FormData) {
         const errorMessage = e instanceof Error ? e.message : String(e)
         return { "success": false, "message": errorMessage }
     }
-    redirect("/", RedirectType.push)
+    redirect("/root/dashboard", RedirectType.push)
 }
 
 

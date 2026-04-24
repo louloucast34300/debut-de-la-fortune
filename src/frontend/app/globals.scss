@@ -36,5 +36,13 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+
+
 // auth 
-@import "./features/auth/register/register.scss"
+@import "./features/auth/register/register.scss";
+
+//navigation
+@import "./components/navigation/navigation.scss";
+
+// modale-matchmaking
+@import "./components/modal-matchmaking/modal-matchmaking.scss";

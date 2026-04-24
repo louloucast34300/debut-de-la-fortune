@@ -1,0 +1,64 @@
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.animate-spin {
+    animation: spin 1s linear infinite;
+}
+
+.modale-match {
+    .modale-match-layout {
+        position: fixed;
+        inset: 0;
+        background-color: rgba(0, 0, 0, 0.6);
+        backdrop-filter: blur(4px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 100;
+
+        .modale-match-inner {
+            background-color: #1a1a2e;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 40px 48px;
+            min-width: 360px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+            box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
+
+            div {
+                color: #e0e0e0;
+                font-size: 1.1rem;
+                display: flex;
+                align-items: center;
+                gap: 10px;
+            }
+
+            button {
+                width: 100%;
+                padding: 12px 24px;
+                border-radius: 8px;
+                border: none;
+                font-size: 0.95rem;
+                font-weight: 600;
+                cursor: pointer;
+                transition: opacity 0.15s ease;
+
+                &:hover { opacity: 0.85; }
+
+                &:first-of-type {
+                    background-color: #4f46e5;
+                    color: white;
+                }
+
+                &:last-of-type:not(:first-of-type) {
+                    background-color: rgba(255, 255, 255, 0.08);
+                    color: #e0e0e0;
+                }
+            }
+        }
+    }
+}

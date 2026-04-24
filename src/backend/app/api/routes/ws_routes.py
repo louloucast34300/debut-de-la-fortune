@@ -10,12 +10,12 @@ import jwt
 router = APIRouter()
 game_service = GameService()
 
-@router.websocket("/ws/{user_id}")
+@router.websocket("/{user_id}")
 async def websocket_endpoint(websocket: WebSocket, user_id: str, token: str=Query(...), db: AsyncSession = Depends(get_db)):
     try:
         payload = decode_token(token)
     except jwt.ExpiredSignatureError:
-        await websocket.close(code=4001) #code custom "token expiré"
+        await websocket.close(code=4001)
         return
     except jwt.InvalidTokenError:
         await websocket.close(code=4002)
@@ -39,23 +39,33 @@ async def websocket_endpoint(websocket: WebSocket, user_id: str, token: str=Quer
 
 
 async def handle_message(user_id: str, data: dict, db:AsyncSession):
+
     match data.get("type"):
 
+        ## "join-queue"
         case "join_queue":
             if user_id not in queue:
                 queue.append(user_id)
-            await send_to(user_id, {"type": "queued", "count": len(queue)})
+            await broadcast(queue, {"type": "queued", "count": len(queue)})
 
             result = try_create_match()
             if result:
                 proposal_id, match = result
                 player_ids = [p["id"] for p in match.players]
-                await broadcast(player_ids, {"type": "match_found", "proposal_id": proposal_id})
+                await broadcast(player_ids, {"type": "match_found", "proposal_id": proposal_id, "player_ids": player_ids})
 
+
+
+        ## "leave_queue"
         case "leave_queue":
             if user_id in queue:
                 queue.remove(user_id)
+            await send_to(user_id, {"type": "match_cancelled"})
+            await broadcast(queue, {"type": "queued", "count": len(queue)})
 
+
+
+        ## "accept_match"
         case "accept_match":
             proposal_id = data.get("proposal_id")
             if not proposal_id:
@@ -67,6 +77,9 @@ async def handle_message(user_id: str, data: dict, db:AsyncSession):
             for player in match.players:
                 if player["id"] == user_id:
                     player["accepted"] = True
+
+            player_ids = [p["id"] for p in match.players]
+            await broadcast(player_ids, {"type": "player_accepted", "user_id": user_id})
 
             # Tous ont accepté ?
             if all(p["accepted"] is True for p in match.players):
@@ -81,13 +94,24 @@ async def handle_message(user_id: str, data: dict, db:AsyncSession):
                 pending_matches.pop(proposal_id, None)
                 await broadcast(player_ids, {"type": "match_ready", "game_id": game["game_id"]})
 
+
+        ## "cancel_match"
         case "cancel_match":
             proposal_id = data.get("proposal_id")
             if not proposal_id:
                 return
+            match = pending_matches.get(proposal_id)
+            if not match:
+                return
             requeued = cancel_match(proposal_id, cancelled_by=user_id)
-            await broadcast(requeued, {"type": "requeued"})
+            await broadcast(requeued, {"type": "requeued", "count": len(queue)})
             await send_to(user_id, {"type": "match_cancelled"})
+
+            result = try_create_match()
+            if result:
+                new_proposal_id, new_match = result
+                new_player_ids = [p["id"] for p in new_match.players]
+                await broadcast(new_player_ids, {"type": "match_found", "proposal_id": new_proposal_id, "player_ids": new_player_ids})
 
 
 async def handle_disconnect(user_id: str):
@@ -100,4 +124,10 @@ async def handle_disconnect(user_id: str):
         if any(p["id"] == user_id for p in match.players):
             requeued = cancel_match(proposal_id, cancelled_by=user_id)
             await broadcast(requeued, {"type": "requeued"})
+
+            result = try_create_match()
+            if result:
+                new_proposal_id, new_match = result
+                new_player_ids = [p["id"] for p in new_match.players]
+                await broadcast(new_player_ids, {"type": "match_found", "proposal_id": new_proposal_id, "player_ids": new_player_ids})
             break

@@ -337,7 +337,7 @@ export function useWebSocket(userId: string, accessToken: string) {
 
 ```typescript
 // app/layout.tsx
-"use client"
+&"use client"
 
 import { useWebSocket } from "@/app/features/matchmaking/useWebSocket"
 import { MatchmakingModal } from "@/app/features/matchmaking/matchmaking"

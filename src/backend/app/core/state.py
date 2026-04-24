@@ -13,13 +13,14 @@ pending_matches: dict[str, PendingMatch] = {}
 
 def try_create_match() -> tuple[str, PendingMatch] | None:
     """Appelé après chaque ajout dans la queue.
-    Si 3 joueurs sont présents, crée un PendingMatch et les retire de la queue.
+    Si 2 joueurs sont présents, crée un PendingMatch et les retire de la queue.
     Retourne (proposal_id, match) ou None si pas assez de joueurs.
     """
-    if len(queue) < 3:
+    if len(queue) < 2:
         return None
 
-    players_ids = [queue.pop(0) for _ in range(3)]
+    players_ids = [queue.pop(0) for _ in range(2)]
+    # proposal_id = C'est une protection contre les messages en retard / désynchronisés. 
     proposal_id = str(uuid.uuid4())
     match = PendingMatch(players=[{"id": pid, "accepted": None} for pid in players_ids])
     pending_matches[proposal_id] = match
@@ -28,8 +29,8 @@ def try_create_match() -> tuple[str, PendingMatch] | None:
 
 def cancel_match(proposal_id: str, cancelled_by: str) -> list[str]:
     """Appelé quand un joueur refuse ou se déconnecte pendant la modale.
-    Re-queue les joueurs qui avaient accepté.
-    Retourne la liste des user_ids re-queués (pour envoyer les WS events).
+    Re-queue les joueurs qui avaient accepté ou n'avaient pas encore répondu.
+    Retourne la liste des user_ids re-quéués (pour envoyer les WS events).
     """
     match = pending_matches.pop(proposal_id, None)
     if not match:
@@ -37,7 +38,7 @@ def cancel_match(proposal_id: str, cancelled_by: str) -> list[str]:
 
     requeued = []
     for player in match.players:
-        if player["id"] != cancelled_by and player["accepted"] is True:
+        if player["id"] != cancelled_by and player["accepted"] is not False:
             queue.append(player["id"])
             requeued.append(player["id"])
     return requeued
