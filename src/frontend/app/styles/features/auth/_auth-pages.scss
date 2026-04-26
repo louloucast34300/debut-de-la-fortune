@@ -1,0 +1,11 @@
+@use './auth-layout';
+
+// Page login : hérite du layout auth commun
+.login-page {
+    @extend .auth-page;
+}
+
+// Page register : hérite du layout auth commun
+.register-page {
+    @extend .auth-page;
+}

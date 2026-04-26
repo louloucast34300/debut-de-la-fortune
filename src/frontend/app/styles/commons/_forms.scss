@@ -1,0 +1,78 @@
+@use '../config/variables' as *;
+@use '../config/mixins' as *;
+
+.form {
+    font-family: $font-kitsch;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+    padding: 40px 30px;
+
+    .form-title {
+        @include kitsch-title($gold);
+    }
+
+    .form-divider {
+        @include rainbow-divider;
+    }
+
+    .field {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        width: 100%;
+
+        label {
+            font-size: 0.85rem;
+            color: $cyan;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            text-shadow: 0 0 6px $cyan;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 3px solid $gold;
+            border-radius: 8px;
+            background: rgba(0, 0, 0, 0.5);
+            color: #fff;
+            font-family: $font-kitsch;
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            box-sizing: border-box;
+
+            &:focus {
+                border-color: $cyan;
+                box-shadow: 0 0 12px $cyan;
+            }
+
+            &::placeholder {
+                color: rgba(255, 255, 255, 0.3);
+            }
+        }
+    }
+
+    .btn-submit {
+        @include btn-kitsch();
+        margin-top: 8px;
+        width: 100%;
+    }
+
+    .form-footer {
+        font-size: 0.85rem;
+        color: rgba(255, 255, 255, 0.6);
+
+        a {
+            color: $pink;
+            text-decoration: none;
+            text-shadow: 0 0 6px $pink;
+
+            &:hover {
+                text-decoration: underline;
+            }
+        }
+    }
+}

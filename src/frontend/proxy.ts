@@ -11,7 +11,7 @@ export async function proxy(request: NextRequest) {
     const refreshToken = request.cookies.get('refresh_token')?.value
     // Pas de token => redirect login
     if(!accessToken){
-        return NextResponse.redirect(new URL('/register', request.url))
+        return NextResponse.redirect(new URL('/login', request.url))
     }
     // Vérification de l'expiration
     const {exp} = jwtDecode<{exp:number}>(accessToken)
@@ -23,7 +23,7 @@ export async function proxy(request: NextRequest) {
 
     // access_token expiré => tenter le refresh
     if(!refreshToken){
-        return NextResponse.redirect(new URL('/register', request.url))
+        return NextResponse.redirect(new URL('/login', request.url))
     }
 
     // appel direct au backend pour éviter les problèmes de cookies dans le proxy
@@ -56,5 +56,5 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-    matcher: ['/((?!register|_next/static|_next/image|favicon.ico).*)']
+    matcher: ['/((?!register|login|_next/static|_next/image|favicon.ico|images).*)']
 }

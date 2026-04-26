@@ -1,0 +1,7 @@
+@use './variables' as *;
+
+@import url('https://fonts.googleapis.com/css2?family=Fredoka+One&display=swap');
+
+body {
+    font-family: $font-sans;
+}

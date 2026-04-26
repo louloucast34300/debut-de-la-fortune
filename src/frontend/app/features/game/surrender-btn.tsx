@@ -1,6 +1,6 @@
 'use client'
 import { useState } from 'react'
-import { surrender_action } from './button-surrender.server'
+import { surrender_action } from '@/app/features/game/game.servers'
 
 export default function ButtonSurrender({ gameId }: { gameId: string }) {
     const [loading, setLoading] = useState(false)

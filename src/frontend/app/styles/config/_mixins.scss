@@ -1,0 +1,80 @@
+@use './variables' as *;
+
+// Texte néon
+@mixin neon-text($color) {
+    color: $color;
+    text-shadow: 0 0 8px $color, 0 0 20px $color;
+}
+
+// Titre kitsch avec ombre 3D
+@mixin kitsch-title($color: $gold) {
+    font-family: $font-kitsch;
+    font-size: 2rem;
+    color: $color;
+    text-shadow:
+        0 0 8px $color,
+        0 0 2px $color,
+        2px 2px 0 $purple-dark;
+    text-align: center;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+}
+
+// Bouton or 3D
+@mixin btn-kitsch (
+    $color-start: $gold, 
+    $color-end: $gold-orange, 
+    $color-shadow: $gold-dark,
+    $font-color:$purple-dark
+    ){
+    padding: 8px 20px;
+    background: linear-gradient(135deg, $color-start, $color-end);
+    border: none;
+    border-radius: 8px;
+    color: $font-color;
+    font-family: $font-kitsch;
+    font-size: 0.95rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    cursor: pointer;
+    box-shadow: 0 0 2px $color-start, 0 4px 0 $color-shadow;
+    transition: transform 0.1s, box-shadow 0.1s;
+
+    &:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 0 12px $color-start, 0 6px 0 $color-shadow;
+    }
+
+    &:active {
+        transform: translateY(2px);
+        box-shadow: 0 0 8px $color-start, 0 2px 0 $color-shadow;
+    }
+}
+
+// Bouton contour néon
+@mixin btn-outline($color) {
+    padding: 8px 20px;
+    background: transparent;
+    border: 2px solid $color;
+    border-radius: 8px;
+    color: $color;
+    font-family: $font-kitsch;
+    font-size: 0.95rem;
+    cursor: pointer;
+    text-shadow: 0 0 6px $color;
+    transition: background 0.2s, box-shadow 0.2s;
+
+    &:hover {
+        background: rgba($color, 0.15);
+        box-shadow: 0 0 12px $color;
+    }
+}
+
+// Séparateur arc-en-ciel
+@mixin rainbow-divider {
+    width: 80%;
+    height: 3px;
+    background: linear-gradient(90deg, $pink, $cyan, $gold, $pink);
+    border: none;
+    border-radius: 2px;
+}

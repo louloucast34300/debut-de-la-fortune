@@ -1,19 +1,19 @@
-import RegisterForm from "@/app/features/auth/register";
-import Image from "next/image";
+import LoginForm from "@/app/features/auth/login";
+import Image from "next/image"
 
-export default function RegisterPage() {
+export default function LoginPage() {
     return (
-        <main className="register-page">
+        <main className="login-page">
             <div className="container">
                 <div className="image-section image-cover">
-                    <Image
-                        src="/images/login2.webp"
+                    <Image  
+                        src="/images/login2.webp" 
                         alt="image du début de la fortune"
-                        fill={true}
+                        fill={true} 
                     />
                 </div>
                 <div className="form-section">
-                    <RegisterForm />
+                    <LoginForm />
                 </div>
             </div>
         </main>

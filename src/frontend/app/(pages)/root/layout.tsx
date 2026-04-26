@@ -1,4 +1,4 @@
-import { get_user_action } from "@/app/features/auth/register/register.server"
+import { get_user_action } from "@/app/features/auth/auth.servers"
 import WebSocketProvider from "@/app/providers/WebSocketProvider"
 import { Navigation } from "@/app/components/navigation/navigation"
 export const dynamic = 'force-dynamic'
@@ -12,9 +12,8 @@ export default async function UserLayout({
     return (
         <WebSocketProvider userId={user.data.id} accessToken={user.data.access_token}>
             <div className="layout">
-                <Navigation/>
+                <Navigation userId={user.data.id} pseudo={user.data.pseudo}/>
                 <div className="layout-content">
-                    <h1>{user.data.pseudo}</h1>
                     {children}
                 </div>
             </div>

@@ -1,15 +1,22 @@
-import QueueButton from "@/app/components/queue-button";
-import { LogoutButton } from "@/app/features/auth/login/atomic/logout/logout";
+import Image from "next/image"
 
 export default async function DashboardPage() {
-
-
   return (
-    <main>
-        <h1>Déconnexion</h1>
-        <LogoutButton />
-        <h2>Rejoindre la file d'attente</h2>
-        < QueueButton />
+    <main className="dashboard-page">
+      <div className="bg-image">
+        <Image
+          src="/images/dashboard.webp"
+          alt="image du début de la fortune"
+          fill={true}
+          style={{ objectFit: 'cover' }}
+        />
+        <div className="bg-overlay" />
+      </div>
+
+
+      <div className="dashboard-content">
+
+      </div>
     </main>
   );
 }

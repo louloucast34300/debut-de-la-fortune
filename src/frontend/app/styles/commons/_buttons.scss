@@ -1,0 +1,20 @@
+@use '../config/mixins' as *;
+@use '../config/variables' as *;
+
+
+.btn{
+    @include btn-kitsch($gold, $gold-orange, $gold-dark);
+    font-size:0.8rem;
+    letter-spacing:0.8px;
+}
+
+.btn-cancel {
+    @include btn-kitsch($red, $red-mid, $red-dark, white );
+    font-size:0.8rem;
+    letter-spacing:0.8px;
+}
+
+.btn-logout{
+     @include btn-outline($pink);
+}
+

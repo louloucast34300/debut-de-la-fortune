@@ -1,0 +1,53 @@
+@use '../../config/variables' as *;
+
+.auth-page {
+    height: 100vh;
+
+    .container {
+        display: flex;
+        height: 100%;
+
+        .image-section {
+            position: relative;
+            overflow: hidden;
+            flex: 1;
+            height: 100%;
+        }
+
+        .form-section {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            width: $auth-panel-width;
+            flex-shrink: 0;
+            background: linear-gradient(160deg, $purple-dark 0%, $purple-deep 100%);
+            border-left: 6px solid $gold;
+            box-shadow:
+                -8px 0 40px rgba(231, 177, 0, 0.25),
+                inset 0 0 60px rgba(106, 0, 181, 0.3);
+            overflow-y: auto;
+        }
+    }
+
+    @media (max-width: $breakpoint-tablet) {
+        .container .form-section {
+            width: $auth-panel-width-tablet;
+        }
+    }
+
+    @media (max-width: $breakpoint-mobile) {
+        .container {
+            .image-section {
+                display: none;
+            }
+
+            .form-section {
+                width: 100%;
+                border-left: none;
+                border-top: 6px solid $gold;
+                box-shadow: none;
+                justify-content: center;
+            }
+        }
+    }
+}

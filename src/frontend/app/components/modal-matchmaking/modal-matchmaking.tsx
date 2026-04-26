@@ -78,10 +78,10 @@ export function ModaleMatchmaking({ userId }: { userId: string }) {
                         ))}
                     </div>
                     {!iAccepted && (
-                        <>
-                            <button type="button" onClick={handleAccept}>Accepter</button>
-                            <button type="button" onClick={handleCancel}>Refuser</button>
-                        </>
+                        <div className="modale-choice">
+                            <button className="btn" type="button" onClick={handleAccept}>Accepter</button>
+                            <button className="btn-cancel" type="button" onClick={handleCancel}>Refuser</button>
+                        </div>
                     )}
                 </>
             )
@@ -91,21 +91,21 @@ export function ModaleMatchmaking({ userId }: { userId: string }) {
                 <>
                     {cancelledByOpponent && <div>Un adversaire a refusé</div>}
                     <div>Recherche en cours ({queueCount} joueur{queueCount > 1 ? 's' : ''}) <Loader2 className="animate-spin" /></div>
-                    <button type="button" onClick={handleSearch}>Stopper la recherche</button>
+                    <button className="btn-cancel" type="button" onClick={handleSearch}>Stopper la recherche</button>
                 </>
             )
         }
         return (
             <>
                 <div>Commencer une partie !</div>
-                <button type="button" onClick={handleSearch}>C'est parti !</button>
+                <button className="btn" type="button" onClick={handleSearch}>C'est parti !</button>
             </>
         )
     }
 
     return (
         <div className="modale-match">
-            <button type="button" onClick={() => setOpen(true)}>Rejoindre une partie</button>
+            <button className="btn" type="button" onClick={() => setOpen(true)}>Rejoindre une partie</button>
             {open &&
                 <div className="modale-match-layout" onClick={() => setOpen(false)}>
                     <div className="modale-match-inner" onClick={(e) => e.stopPropagation()}>

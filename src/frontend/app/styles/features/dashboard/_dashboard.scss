@@ -1,0 +1,93 @@
+@use '../../config/variables' as *;
+@use '../../config/mixins' as *;
+
+.dashboard-page {
+    position: relative;
+    height: 100vh;
+    overflow: hidden;
+    font-family: $font-kitsch;
+
+    .bg-image {
+        position: absolute;
+        inset: 0;
+        z-index: 0;
+
+        .bg-overlay {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(
+                160deg,
+                rgba(59, 0, 112, 0.75) 0%,
+                rgba(0, 0, 0, 0.5) 100%
+            );
+        }
+    }
+
+    .dashboard-nav {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 16px 32px;
+        background: rgba(0, 0, 0, 0.4);
+        border-bottom: 3px solid $gold;
+        box-shadow: 0 4px 20px rgba(231, 177, 0, 0.2);
+
+        .nav-logo {
+            font-size: 1.4rem;
+            @include neon-text($gold);
+            letter-spacing: 2px;
+        }
+
+        button {
+            @include btn-outline($pink);
+        }
+    }
+
+    .dashboard-content {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: calc(100vh - 73px);
+
+        .welcome-card {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+            padding: 48px 56px;
+            background: rgba(26, 0, 58, 0.85);
+            border: 4px solid $gold;
+            border-radius: 16px;
+            box-shadow:
+                0 0 40px rgba(231, 177, 0, 0.3),
+                inset 0 0 40px rgba(106, 0, 181, 0.2);
+            backdrop-filter: blur(8px);
+            text-align: center;
+
+            .card-title {
+                @include kitsch-title($gold);
+                font-size: 2.4rem;
+                margin: 0;
+            }
+
+            .card-divider {
+                @include rainbow-divider;
+            }
+
+            .card-subtitle {
+                color: rgba(255, 255, 255, 0.75);
+                font-size: 1.1rem;
+                margin: 0;
+            }
+
+            button {
+                @include btn-kitsch;
+                padding: 16px 40px;
+            }
+        }
+    }
+}

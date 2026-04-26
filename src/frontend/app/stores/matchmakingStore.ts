@@ -1,5 +1,25 @@
 import { create } from "zustand"
 
+/**
+@websocket "queued":
+@action setQueued(true, data.count)
+    
+@websocket "match_found":
+@action setMatchFound(data.proposal_id, data.player_ids)
+    
+@websocket "match_ready":
+@action setMatchReady(data.game_id)
+    
+@websocket "requeued":
+@action setRequeued(data.count)
+
+@websocket case "match_cancelled":
+@action reset()
+
+@websocket case "player_accepted":
+@action setPlayerAccepted(data.user_id)
+ */
+
 interface MatchMakingStore{
     isInQueue: boolean,
     queueCount: number,
@@ -16,6 +36,7 @@ interface MatchMakingStore{
     reset: () => void
 }
 
+
 export const useMatchmaking = create<MatchMakingStore>((set) => ({
     isInQueue: false,
     queueCount: 0,
@@ -24,7 +45,7 @@ export const useMatchmaking = create<MatchMakingStore>((set) => ({
     acceptedIds: [],
     gameId: null,
     cancelledByOpponent: false,
-    // send : "join_queue" -> réponse "queued"
+
     setQueued:(inQueue, count) => set({ isInQueue: inQueue, queueCount: count, cancelledByOpponent: false }),
     setMatchFound: (proposalId, playerIds) => set({ proposalId, playerIds, acceptedIds: [], cancelledByOpponent: false }),
     setPlayerAccepted: (userId) => set((s) => ({ acceptedIds: [...s.acceptedIds, userId] })),

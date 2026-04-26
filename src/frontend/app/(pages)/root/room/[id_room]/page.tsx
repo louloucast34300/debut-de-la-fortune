@@ -1,4 +1,4 @@
-import ButtonSurrender from '@/app/components/button-surrender/button-surrender'
+import ButtonSurrender from '@/app/features/game/surrender-btn'
 
 export default async function RoomPage({ params }: { params: { id_room: string } }){
     const { id_room } = await params

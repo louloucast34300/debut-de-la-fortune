@@ -1,0 +1,45 @@
+@use '../config/variables' as *;
+@use '../config/mixins' as *;
+
+.navbar-layout {
+    position: fixed;
+    width:100%;
+    top:0;
+    z-index: 10;
+    background: rgba(0, 0, 0, 0.5);
+    border-bottom: 3px solid $gold;
+    box-shadow: 0 4px 20px rgba(231, 177, 0, 0.2);
+    padding: 12px 32px;
+    font-family: $font-kitsch;
+
+    .navbar-container {
+        display:flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+
+        .navbar-brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+
+            .navbar-logo {
+                font-size: 1.4rem;
+                @include neon-text($gold);
+                letter-spacing: 2px;
+                white-space: nowrap;
+            }
+       
+        }
+        .navbar-pseudo{
+            @include kitsch-title($gold);
+            font-size:1.4rem;
+        }
+        .navbar-actions {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+    }
+}
+
