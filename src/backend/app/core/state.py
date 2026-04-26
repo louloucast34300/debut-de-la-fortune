@@ -28,17 +28,10 @@ def try_create_match() -> tuple[str, PendingMatch] | None:
 
 
 def cancel_match(proposal_id: str, cancelled_by: str) -> list[str]:
-    """Appelé quand un joueur refuse ou se déconnecte pendant la modale.
-    Re-queue les joueurs qui avaient accepté ou n'avaient pas encore répondu.
-    Retourne la liste des user_ids re-quéués (pour envoyer les WS events).
+    """Annule un match en attente.
+    Retourne la liste des autres joueurs (à re-queue ou juste notifier selon le contexte d'appel).
     """
     match = pending_matches.pop(proposal_id, None)
     if not match:
         return []
-
-    requeued = []
-    for player in match.players:
-        if player["id"] != cancelled_by and player["accepted"] is not False:
-            queue.append(player["id"])
-            requeued.append(player["id"])
-    return requeued
+    return [p["id"] for p in match.players if p["id"] != cancelled_by]

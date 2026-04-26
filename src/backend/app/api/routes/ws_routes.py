@@ -1,5 +1,6 @@
 from fastapi import APIRouter,Query, WebSocket,Depends, WebSocketDisconnect
 from core.connected_users import connected_users, send_to, broadcast
+import asyncio
 from core.state import queue, try_create_match, cancel_match, pending_matches
 from utils.jwt import decode_token
 from api.services.game_service import GameService
@@ -9,6 +10,16 @@ import jwt
 
 router = APIRouter()
 game_service = GameService()
+
+MATCH_TIMEOUT = 20  # secondes
+
+async def match_timeout(proposal_id: str):
+    """Cas n°4 : timeout 20s → les deux joueurs sortent de la recherche sans re-queue."""
+    await asyncio.sleep(MATCH_TIMEOUT)
+    match = pending_matches.pop(proposal_id, None)
+    if match:
+        player_ids = [p["id"] for p in match.players]
+        await broadcast(player_ids, {"type": "match_cancelled"})
 
 @router.websocket("/{user_id}")
 async def websocket_endpoint(websocket: WebSocket, user_id: str, token: str=Query(...), db: AsyncSession = Depends(get_db)):
@@ -53,6 +64,7 @@ async def handle_message(user_id: str, data: dict, db:AsyncSession):
                 proposal_id, match = result
                 player_ids = [p["id"] for p in match.players]
                 await broadcast(player_ids, {"type": "match_found", "proposal_id": proposal_id, "player_ids": player_ids})
+                asyncio.create_task(match_timeout(proposal_id))
 
 
 
@@ -103,15 +115,19 @@ async def handle_message(user_id: str, data: dict, db:AsyncSession):
             match = pending_matches.get(proposal_id)
             if not match:
                 return
-            requeued = cancel_match(proposal_id, cancelled_by=user_id)
-            await broadcast(requeued, {"type": "requeued", "count": len(queue)})
+            # Cas 2 & 3 : refus explicite → tous les autres repartent en recherche
+            others = cancel_match(proposal_id, cancelled_by=user_id)
             await send_to(user_id, {"type": "match_cancelled"})
-
-            result = try_create_match()
-            if result:
-                new_proposal_id, new_match = result
-                new_player_ids = [p["id"] for p in new_match.players]
-                await broadcast(new_player_ids, {"type": "match_found", "proposal_id": new_proposal_id, "player_ids": new_player_ids})
+            for pid in others:
+                queue.append(pid)
+            if others:
+                await broadcast(others, {"type": "requeued", "count": len(queue)})
+                result = try_create_match()
+                if result:
+                    new_proposal_id, new_match = result
+                    new_player_ids = [p["id"] for p in new_match.players]
+                    await broadcast(new_player_ids, {"type": "match_found", "proposal_id": new_proposal_id, "player_ids": new_player_ids})
+                    asyncio.create_task(match_timeout(new_proposal_id))
 
 
 async def handle_disconnect(user_id: str):
@@ -119,15 +135,18 @@ async def handle_disconnect(user_id: str):
     if user_id in queue:
         queue.remove(user_id)
 
-    # Joueur dans un pending match → annuler le match
+    # Joueur dans un pending match → traité comme un refus → les autres repartent en recherche
     for proposal_id, match in list(pending_matches.items()):
         if any(p["id"] == user_id for p in match.players):
-            requeued = cancel_match(proposal_id, cancelled_by=user_id)
-            await broadcast(requeued, {"type": "requeued"})
-
-            result = try_create_match()
-            if result:
-                new_proposal_id, new_match = result
-                new_player_ids = [p["id"] for p in new_match.players]
-                await broadcast(new_player_ids, {"type": "match_found", "proposal_id": new_proposal_id, "player_ids": new_player_ids})
+            others = cancel_match(proposal_id, cancelled_by=user_id)
+            for pid in others:
+                queue.append(pid)
+            if others:
+                await broadcast(others, {"type": "requeued", "count": len(queue)})
+                result = try_create_match()
+                if result:
+                    new_proposal_id, new_match = result
+                    new_player_ids = [p["id"] for p in new_match.players]
+                    await broadcast(new_player_ids, {"type": "match_found", "proposal_id": new_proposal_id, "player_ids": new_player_ids})
+                    asyncio.create_task(match_timeout(new_proposal_id))
             break

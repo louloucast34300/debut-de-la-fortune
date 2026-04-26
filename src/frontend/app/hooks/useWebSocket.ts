@@ -14,9 +14,10 @@ export function useWebSocket(userId: string, accessToken: string) {
         const ws = new WebSocket(`${wsUrl}/api/v1/ws/${userId}?token=${accessToken}`)
         wsRef.current = ws
 
-        // Connexion établie
+        // Connexion établie — reset du store pour éviter un état périmé après reconnexion
         ws.onopen = () => {
             console.log("WS connecté")
+            reset()
         }
         // Réception d'un message du backend , en fonction du message on met à jour un state , refresh les informations de la vue. 
         ws.onmessage = (event) => {
