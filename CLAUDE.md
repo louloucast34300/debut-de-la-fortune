@@ -82,20 +82,18 @@ except ...
 app/
   features/       ← une feature = un dossier (auth, game, profile...)
     auth/
-      register/
-        register.tsx          ← composant principal
-        register.server.ts    ← server actions Next.js
-        register.schema.ts    ← validation (zod)
-        register.type.ts      ← types TypeScript
-        register.scss         ← styles
-        atomic/               ← sous-composants si la feature est découpée
+        login.tsx         ← composant principal 1
+        register.tsx      ← composant principal 2
+        auth.server.ts    ← server actions Next.js
+        auth.schema.ts    ← validation (zod)
+        auth.type.ts      ← types TypeScript
   (pages)/        ← pages Next.js (App Router)
-  styles/         ← styles globaux
+  styles/         ← styles
   layout.tsx
   page.tsx
 ```
 
 ### Règles
 - Chaque feature contient tous ses fichiers au même endroit (colocation)
-- Si un composant de `atomic/` devient réutilisable entre features, il migre vers un dossier `components/` global
+- Si un composant n'a pas de logique métier et devient réutilisable entre features, il migre vers un dossier `components/` global
 - Les appels API vers le backend se font dans les fichiers `.server.ts` (server actions)

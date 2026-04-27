@@ -1,8 +1,15 @@
 from dataclasses import dataclass
 import uuid
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from domains.game import Game
 
 # user_ids en attente — vit pour toute la durée du serveur
 queue: list[str] = []
+
+# parties actives en mémoire — game_id -> instance Game
+active_games: dict[str, "Game"] = {}
 
 @dataclass
 class PendingMatch:

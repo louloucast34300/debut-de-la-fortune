@@ -1,5 +1,5 @@
 import uuid
-from api.models.auth_orm import Game, GameParticipants
+from api.models.auth_orm import Game, GameParticipants, User
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import IntegrityError
@@ -11,11 +11,21 @@ class GameService():
             game = Game(id=uuid.uuid4(), status="waiting")
             db.add(game)
             await db.flush()
-
+            players = []
             for user_id in player_ids:
+                result = await db.execute(select(User).where(User.id == user_id))
+                user: User | None = result.scalar_one_or_none()
+
+                if not user:
+                    await db.rollback()
+                    return {"success": False, "message": "Utilisateur introuvable"}
+                
+                players.append({"id": str(user.id), "pseudo": user.pseudo})
+                
                 db.add(GameParticipants(
                     id=uuid.uuid4(),
                     user_id=uuid.UUID(user_id),
+                    pseudo=user.pseudo,
                     game_id=game.id
                 ))
             await db.commit()
@@ -28,7 +38,7 @@ class GameService():
             print("Exception", e)
             return {"success":False, "message":"La partie n'a pas pu être enregistrée."}
         
-        return {"success":True, "game_id":str(game.id)}
+        return {"success":True, "game_id":str(game.id),"players":players}
 
     async def surrenderGame(self, db: AsyncSession, game_id: str, user_id: str):
         result = await db.execute(

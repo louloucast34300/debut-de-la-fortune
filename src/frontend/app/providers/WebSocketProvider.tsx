@@ -5,6 +5,7 @@ import { useWebSocket } from "@/app/hooks/useWebSocket"
 
 interface WebSocketContextValue {
     send: (payload: object) => void
+    isReady: boolean
 }
 
 const WebSocketContext = createContext<WebSocketContextValue | null>(null)
@@ -24,10 +25,10 @@ export default function WebSocketProvider({
     accessToken: string
     children: React.ReactNode
 }) {
-    const { send } = useWebSocket(userId, accessToken)
+    const { send, isReady } = useWebSocket(userId, accessToken)
 
     return (
-        <WebSocketContext.Provider value={{ send }}>
+        <WebSocketContext.Provider value={{ send, isReady }}>
             {children}
         </WebSocketContext.Provider>
     )

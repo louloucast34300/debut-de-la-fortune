@@ -1,3 +1,4 @@
+import { Game } from '@/app/features/game/game'
 import ButtonSurrender from '@/app/features/game/surrender-btn'
 
 export default async function RoomPage({ params }: { params: { id_room: string } }){
@@ -6,6 +7,7 @@ export default async function RoomPage({ params }: { params: { id_room: string }
         <div>
             <div>ROOM {id_room}</div>
             <ButtonSurrender gameId={id_room} />
+            <Game gameId={id_room}/>
         </div>
     )
 }

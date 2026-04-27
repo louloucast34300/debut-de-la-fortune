@@ -1,11 +1,13 @@
 "use client"
 
-import { useEffect, useRef } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useMatchmaking } from "@/app/stores/matchmakingStore"
-
+import { useGameStore } from "@/app/stores/gameStore"
 export function useWebSocket(userId: string, accessToken: string) {
     const wsRef = useRef<WebSocket | null>(null)
+    const [isReady, setIsReady] = useState(false)
     const { setQueued, setMatchFound, setMatchReady, setRequeued, setPlayerAccepted, reset } = useMatchmaking()
+    const { getCurrentGame } = useGameStore()
 
     useEffect(() => {
         // Ouverture de la connexion
@@ -18,6 +20,7 @@ export function useWebSocket(userId: string, accessToken: string) {
         ws.onopen = () => {
             console.log("WS connecté")
             reset()
+            setIsReady(true)
         }
         // Réception d'un message du backend , en fonction du message on met à jour un state , refresh les informations de la vue. 
         ws.onmessage = (event) => {
@@ -42,6 +45,10 @@ export function useWebSocket(userId: string, accessToken: string) {
                 case "player_accepted":
                     setPlayerAccepted(data.user_id)
                     break
+                case "game_running_first":
+                    console.log("ici !")
+                    getCurrentGame(data.game)
+                    break
             }
         }
 
@@ -64,5 +71,5 @@ export function useWebSocket(userId: string, accessToken: string) {
             wsRef.current.send(JSON.stringify(payload))
         }
     }
-    return { send }
+    return { send, isReady }
 }

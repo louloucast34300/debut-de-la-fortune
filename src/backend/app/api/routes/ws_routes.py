@@ -1,12 +1,13 @@
 from fastapi import APIRouter,Query, WebSocket,Depends, WebSocketDisconnect
 from core.connected_users import connected_users, send_to, broadcast
 import asyncio
-from core.state import queue, try_create_match, cancel_match, pending_matches
+from core.state import queue, try_create_match, cancel_match, pending_matches, active_games
 from utils.jwt import decode_token
 from api.services.game_service import GameService
 from sqlalchemy.ext.asyncio import AsyncSession
 from core.db import get_db
 import jwt
+from domains.game import Game
 
 router = APIRouter()
 game_service = GameService()
@@ -66,16 +67,12 @@ async def handle_message(user_id: str, data: dict, db:AsyncSession):
                 await broadcast(player_ids, {"type": "match_found", "proposal_id": proposal_id, "player_ids": player_ids})
                 asyncio.create_task(match_timeout(proposal_id))
 
-
-
         ## "leave_queue"
         case "leave_queue":
             if user_id in queue:
                 queue.remove(user_id)
             await send_to(user_id, {"type": "match_cancelled"})
             await broadcast(queue, {"type": "queued", "count": len(queue)})
-
-
 
         ## "accept_match"
         case "accept_match":
@@ -104,9 +101,12 @@ async def handle_message(user_id: str, data: dict, db:AsyncSession):
                     await broadcast(player_ids, {"type": "match_error", "message": game["message"]})
                     return
                 pending_matches.pop(proposal_id, None)
+                game_instance = Game()
+                game_instance.add_players(game["players"])
+                
+                active_games[game["game_id"]] = game_instance
                 await broadcast(player_ids, {"type": "match_ready", "game_id": game["game_id"]})
-
-
+                
         ## "cancel_match"
         case "cancel_match":
             proposal_id = data.get("proposal_id")
@@ -126,8 +126,22 @@ async def handle_message(user_id: str, data: dict, db:AsyncSession):
                 if result:
                     new_proposal_id, new_match = result
                     new_player_ids = [p["id"] for p in new_match.players]
+                    
                     await broadcast(new_player_ids, {"type": "match_found", "proposal_id": new_proposal_id, "player_ids": new_player_ids})
                     asyncio.create_task(match_timeout(new_proposal_id))
+
+        case "start_game":
+            # récupérer information de la game
+            game_id = data.get("game_id")
+            if not game_id:
+                return
+            game_instance = active_games.get(game_id)
+            print("game ==================>",game_instance)
+            if not game_instance:
+                return
+            await send_to(user_id, {"type": "game_running_first", "game": game_instance.game})
+
+
 
 
 async def handle_disconnect(user_id: str):
