@@ -7,7 +7,7 @@ from api.services.game_service import GameService
 from sqlalchemy.ext.asyncio import AsyncSession
 from core.db import get_db
 import jwt
-from domains.game import Game
+from domains.game import Game, Manche
 
 router = APIRouter()
 game_service = GameService()
@@ -101,7 +101,11 @@ async def handle_message(user_id: str, data: dict, db:AsyncSession):
                     await broadcast(player_ids, {"type": "match_error", "message": game["message"]})
                     return
                 pending_matches.pop(proposal_id, None)
+
                 game_instance = Game()
+
+                game_instance.add_manche(1)
+
                 game_instance.add_players(game["players"])
                 
                 active_games[game["game_id"]] = game_instance
@@ -130,17 +134,84 @@ async def handle_message(user_id: str, data: dict, db:AsyncSession):
                     await broadcast(new_player_ids, {"type": "match_found", "proposal_id": new_proposal_id, "player_ids": new_player_ids})
                     asyncio.create_task(match_timeout(new_proposal_id))
 
+        ## ============ GAME EVENTS ========================= ##
         case "start_game":
-            # récupérer information de la game
             game_id = data.get("game_id")
             if not game_id:
                 return
             game_instance = active_games.get(game_id)
-            print("game ==================>",game_instance)
             if not game_instance:
                 return
-            await send_to(user_id, {"type": "game_running_first", "game": game_instance.game})
+            # Rejoin : la partie est déjà en cours, on renvoie l'état courant uniquement au joueur qui reconnecte
+            if game_instance.game["party"]["step"] != "":
+                await send_to(user_id, {"type": "game_update", "game": game_instance.game})
+                return
+            # Premier démarrage : on initialise et on broadcast à tous
+            player_ids = [p["id"] for p in game_instance.game["players"]]
+            game_instance.game["party"]["step"] = "choosing_random_player"
+            await broadcast(player_ids, {"type": "game_update", "game": game_instance.game})
+        
+        case "choose_started_player":
+            game_id = data.get("game_id")
+            if not game_id:
+                return
+            game_instance: Game | None = active_games.get(game_id)
+            if not game_instance:
+                return
+            # Idempotent : on n'exécute que si on est encore dans la bonne étape
+            if game_instance.game["party"]["step"] != "choosing_random_player":
+                return
+            game_instance.define_started_player()
+            game_instance.game["party"]["step"] = "choosing_wheel_value"
+            player_ids = [p["id"] for p in game_instance.game["players"]]
+            await broadcast(player_ids, {"type": "game_update", "game": game_instance.game})
+        
+        case "choose_wheel_value":
+            game_id = data.get("game_id")
+            current_gain = data.get("current_gain")
+            if not game_id or not current_gain:
+                return
+            game_instance: Game | None = active_games.get(game_id)
+            if not game_instance:
+                return
+            if game_instance.game["party"]["step"] != "choosing_wheel_value":
+                return
+            if current_gain == "banqueroot":
+                game_instance.next_player_action()
+                game_instance.game["party"]["step"] = "choosing_wheel_value"
+                player_ids = [p["id"] for p in game_instance.game["players"]]
+                await broadcast(player_ids, {"type": "game_update", "game": game_instance.game})
+            else:
+                game_instance.game["party"]["current_gain"] = current_gain
+                game_instance.game["party"]["step"] = "choosing_pendu_letter"
+                player_ids = [p["id"] for p in game_instance.game["players"]]
+                await broadcast(player_ids, {"type": "game_update", "game": game_instance.game})
 
+        case "choose_pendu_letter":
+            #0) IMPORTANT : instancier le pendu au début de la game
+            #1) vérifier la lettre 
+            #2) si mauvaise 
+            # ===> game_instance.next_player_action()
+            # ===> game_instance.game["party"]["step"] = "choosing_wheel_value"
+            #2) si bonne
+            # ===> calcul du gain en fonction du nombre de lettres
+            #3) vérifier si le mot est complété ou non
+            #3) si pas complet
+            # ===> game_instance.game["party"]["step"] = "choosing_pendu_letter" de nouveau
+            #3) si complet
+            # on finit la manche et la partie pour le moment
+
+            pass
+
+
+
+            
+
+        
+
+            
+            
+            
 
 
 

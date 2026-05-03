@@ -6,12 +6,14 @@ class Game:
         self.game = {
             "party":{
                 "state":"STARTED",
+                "step":"",
                 "current_player": 0,
                 "current_gain": "",
                 "wheel_gains": [50, 50, 100, 100, 200, 200, 300, 400, 500, 'banqueroot'],
                 "pendu": self.pendu.get_state()
             },
-            "players":[]
+            "players":[],
+            "manches":[]
         }
 
 
@@ -43,10 +45,17 @@ class Game:
     #         player = Player(name)
     #         self.game["players"].append(player.create_player(id=idx))
 
+    def add_manche(self,id):
+        manche = Manche()
+        new_manche = manche.create_manche(id=id,word=self.game["party"]["pendu"]["secret_word"])
+        self.game["manches"].append(new_manche)
+
     def turn_wheel(self):
         idx_chosen = random.randint(0,(len(self.game["party"]["wheel_gains"]) - 1))
         gain_chosen = self.game["party"]["wheel_gains"][idx_chosen]
         self.game["party"]["current_gain"] = gain_chosen
+
+    
 
     def define_started_player(self):
         idx_chosen = random.randint(0,(len(self.game["players"]) - 1))
@@ -129,6 +138,20 @@ class Player:
             }
         return new_player
     
+
+
+
+class Manche:
+    def create_manche(self, id:int, word:str):
+        new_manche = {
+            "id":id,
+            "word":word,
+            "status":"RUNNING" # | FINISHED
+        }
+        return new_manche
+    
+
+
 
 class PenduGame:
     def __init__(self):

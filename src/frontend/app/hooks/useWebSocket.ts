@@ -49,6 +49,12 @@ export function useWebSocket(userId: string, accessToken: string) {
                     console.log("ici !")
                     getCurrentGame(data.game)
                     break
+                case "define_started_player":
+                    getCurrentGame(data.game)
+                    break
+                case "game_update":
+                    getCurrentGame(data.game)
+                    break
             }
         }
 
