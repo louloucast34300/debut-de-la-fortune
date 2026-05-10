@@ -7,7 +7,7 @@ export function useWebSocket(userId: string, accessToken: string) {
     const wsRef = useRef<WebSocket | null>(null)
     const [isReady, setIsReady] = useState(false)
     const { setQueued, setMatchFound, setMatchReady, setRequeued, setPlayerAccepted, reset } = useMatchmaking()
-    const { getCurrentGame } = useGameStore()
+    const { getCurrentGame, setLetterResult, currentGame } = useGameStore()
 
     useEffect(() => {
         // Ouverture de la connexion
@@ -46,7 +46,6 @@ export function useWebSocket(userId: string, accessToken: string) {
                     setPlayerAccepted(data.user_id)
                     break
                 case "game_running_first":
-                    console.log("ici !")
                     getCurrentGame(data.game)
                     break
                 case "define_started_player":
@@ -55,6 +54,15 @@ export function useWebSocket(userId: string, accessToken: string) {
                 case "game_update":
                     getCurrentGame(data.game)
                     break
+                case "letter_result": {
+                    const store = useGameStore.getState()
+                    const players = store.currentGame?.players ?? []
+                    const currentPlayerIdx = store.currentGame?.party.current_player ?? 0
+                    const playerName = players[currentPlayerIdx]?.name ?? "Un joueur"
+                    setLetterResult({ ...data, player_name: playerName })
+                    setTimeout(() => setLetterResult(null), 3000)
+                    break
+                }
             }
         }
 

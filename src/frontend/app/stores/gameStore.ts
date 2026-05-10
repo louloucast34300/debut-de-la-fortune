@@ -27,15 +27,27 @@ export interface Game {
     manches: Manche[]
 }
 
+export interface LetterResult {
+    success: boolean
+    message: string
+    nbr_of_letter_found: number
+    code_error: number
+    word_completed: boolean
+    player_name: string
+}
+
 interface GameStore {
     currentGame: Game | null
     currentPlayer: Player | null
+    letterResult: LetterResult | null
     getCurrentGame: (game: Game | null) => void
+    setLetterResult: (result: LetterResult | null) => void
 }
 
 export const useGameStore = create<GameStore>((set) => ({
     currentGame: null,
     currentPlayer: null,
+    letterResult: null,
     getCurrentGame: (game) => {
         if (!game) {
             set({ currentGame: null, currentPlayer: null })
@@ -43,5 +55,6 @@ export const useGameStore = create<GameStore>((set) => ({
         }
         const player = game.players[game.party.current_player] ?? null
         set({ currentGame: game, currentPlayer: player })
-    }
+    },
+    setLetterResult: (result) => set({ letterResult: result }),
 }))

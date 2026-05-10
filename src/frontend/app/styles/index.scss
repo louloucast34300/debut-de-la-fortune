@@ -15,6 +15,12 @@
 @forward 'features/auth/login';
 @forward 'features/auth/register';
 @forward 'features/dashboard/dashboard';
+@forward 'features/game/cagnotte-tracker';
+@forward 'features/game/player-tracker';
+@forward 'features/game/letters-panel';
+@forward 'features/game/game';
+@forward 'features/game/pendu-tracker';
+
 
 // Components
 @forward 'components/navigation';

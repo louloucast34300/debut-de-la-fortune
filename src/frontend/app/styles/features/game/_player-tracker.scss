@@ -1,0 +1,31 @@
+@use '../../config/variables' as *;
+@use '../../config/mixins' as *;
+
+.player-tracker {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 16px 32px;
+    background: rgba($purple-dark, 0.6);
+    border: 2px solid rgba($pink, 0.5);
+    border-radius: 12px;
+    box-shadow: 0 0 16px rgba($pink, 0.2);
+
+    &__name {
+        font-family: $font-kitsch;
+        font-size: 1.1rem;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        @include neon-text($pink);
+    }
+
+    &__action {
+        font-family: $font-kitsch;
+        font-size: 1.6rem;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+        @include neon-text($gold);
+        min-height: 2rem;
+    }
+}

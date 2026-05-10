@@ -1,0 +1,116 @@
+@use '../../config/variables' as *;
+@use '../../config/mixins' as *;
+
+.game-page {
+    min-height: 100vh;
+    background: linear-gradient(180deg, $purple-deep 0%, $purple-dark 100%);
+    display: flex;
+    flex-direction: column;
+}
+
+.game-infos {
+    text-align: center;
+    padding: 10px;
+    font-family: $font-kitsch;
+    font-size: 1rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    @include neon-text($pink);
+    min-height: 2rem;
+}
+
+.game-layout {
+    display: flex;
+    flex: 1;
+    gap: 24px;
+    padding: 24px;
+    align-items: flex-start;
+
+    &__actions {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 24px;
+    }
+
+    &__pendu {
+        flex-shrink: 0;
+        background: rgba($purple-dark, 0.5);
+        border: 3px solid $gold;
+        border-radius: 16px;
+        box-shadow: 0 0 24px rgba($gold, 0.3);
+        padding: 16px;
+    }
+}
+
+.game-letter-notif {
+    position: fixed;
+    top: 80px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 100;
+    padding: 12px 28px;
+    border-radius: 10px;
+    font-family: $font-kitsch;
+    font-size: 1.1rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    animation: notif-in 0.25s ease;
+
+    &--error {
+        background: rgba($red-dark, 0.9);
+        border: 2px solid $red;
+        @include neon-text($red);
+        box-shadow: 0 0 20px rgba($red, 0.5);
+    }
+
+    &--success {
+        background: rgba(#003a10, 0.95);
+        border: 2px solid $green;
+        @include neon-text($green);
+        box-shadow: 0 0 20px rgba($green, 0.5);
+    }
+}
+
+@keyframes notif-in {
+    from { opacity: 0; transform: translateX(-50%) translateY(-10px); }
+    to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+.game-waiting {
+    font-family: $font-kitsch;
+    font-size: 1.2rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    text-align: center;
+    @include neon-text($cyan);
+    padding: 24px;
+}
+
+.wheel-section {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+
+    &__label {
+        font-family: $font-kitsch;
+        font-size: 1.1rem;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        @include neon-text($cyan);
+    }
+
+    &__gains {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+
+    &__btn {
+        @include btn-kitsch;
+    }
+
+    &__btn--banqueroot {
+        @include btn-kitsch($red, $red-mid, $red-dark, #fff);
+    }
+}
