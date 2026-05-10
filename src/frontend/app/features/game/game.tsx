@@ -1,12 +1,14 @@
 "use client"
 
-import { useEffect, useRef } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useGameStore } from "@/app/stores/gameStore"
 import { useWS } from "@/app/providers/WebSocketProvider"
 import { StatePanel } from "./state-panel"
 
 export const Game = ({gameId, userId}:{gameId:string, userId: string}) => {
     const {currentGame, currentPlayer} = useGameStore()
+    const [infos, setInfos] = useState("")
+    const [ letter, setLetter ] = useState("")
     const {send, isReady} = useWS()
 
     useEffect(() => {
@@ -20,6 +22,18 @@ export const Game = ({gameId, userId}:{gameId:string, userId: string}) => {
     }, [isReady])
     console.log(currentGame)
 
+    useEffect(() => {
+        if(currentGame?.party.step === "game_over"){
+            
+            setInfos("Partie terminée !")
+        } else if(currentGame?.party.step === "manche_completed"){
+            setInfos("nouvelle manche dans 10 secondes")
+        } else {
+            setInfos("")
+        }
+    }, [currentGame?.party.step])
+
+
     if(!currentGame){
         return(
             <div>La game a bougé ..</div>
@@ -30,8 +44,12 @@ export const Game = ({gameId, userId}:{gameId:string, userId: string}) => {
     async function handleWheelValue(gain:string | number){
         send({ type: "choose_wheel_value", game_id: gameId, current_gain:gain})
     }
+    async function handleLetter(){
+        send({ type: "choose_pendu_letter", game_id: gameId, letter:letter, user_id:userId})
+    }
     return (
         <div>
+            <div>Informations : {infos}</div>
             <div>
                 {currentGame.party.step === "choosing_random_player" && <div> Choix du joueur qui commence ... </div>}
                 {currentGame.party.step === "choosing_wheel_value" &&
@@ -58,7 +76,8 @@ export const Game = ({gameId, userId}:{gameId:string, userId: string}) => {
                         <div>
                             <div>Choisir une lettre</div>
                             <div>
-                                <input type="text" />
+                                <input type="text" onChange={(e) => setLetter(e.target.value)}/>
+                                <button onClick={() => handleLetter()}>valider</button>
                             </div>
                         </div>
                         )

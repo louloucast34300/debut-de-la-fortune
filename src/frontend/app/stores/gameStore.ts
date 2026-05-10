@@ -16,6 +16,7 @@ export interface Game {
         step: string
         current_player: number
         current_gain: string
+        current_manche: number
         wheel_gains: (string | number)[]
         pendu: {
             secret_word: string

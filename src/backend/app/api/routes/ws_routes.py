@@ -22,6 +22,20 @@ async def match_timeout(proposal_id: str):
         player_ids = [p["id"] for p in match.players]
         await broadcast(player_ids, {"type": "match_cancelled"})
 
+NEW_MANCHE_DELAY = 10  # secondes
+
+async def manche_delay(game_id: str):
+    await asyncio.sleep(NEW_MANCHE_DELAY)
+    game_instance = active_games.get(game_id)
+    if not game_instance or game_instance.game["party"]["step"] != "manche_completed":
+        return
+    number_manche = len(game_instance.game["manches"]) + 1
+    game_instance.add_manche(number_manche)
+    game_instance.define_started_player()
+    game_instance.game["party"]["step"] = "choosing_wheel_value"
+    player_ids = [p["id"] for p in game_instance.game["players"]]
+    await broadcast(player_ids, {"type": "game_update", "game": game_instance.game})
+
 @router.websocket("/{user_id}")
 async def websocket_endpoint(websocket: WebSocket, user_id: str, token: str=Query(...), db: AsyncSession = Depends(get_db)):
     try:
@@ -105,6 +119,7 @@ async def handle_message(user_id: str, data: dict, db:AsyncSession):
                 game_instance = Game()
 
                 game_instance.add_manche(1)
+ 
 
                 game_instance.add_players(game["players"])
                 
@@ -177,6 +192,10 @@ async def handle_message(user_id: str, data: dict, db:AsyncSession):
             if game_instance.game["party"]["step"] != "choosing_wheel_value":
                 return
             if current_gain == "banqueroot":
+                current_player = next((p for p in game_instance.game["players"] if p["id"] == user_id), None)
+                if not current_player:
+                    return
+                current_player["cagnotte"] = 0
                 game_instance.next_player_action()
                 game_instance.game["party"]["step"] = "choosing_wheel_value"
                 player_ids = [p["id"] for p in game_instance.game["players"]]
@@ -188,20 +207,81 @@ async def handle_message(user_id: str, data: dict, db:AsyncSession):
                 await broadcast(player_ids, {"type": "game_update", "game": game_instance.game})
 
         case "choose_pendu_letter":
-            #0) IMPORTANT : instancier le pendu au début de la game
+            game_id = data.get("game_id") 
+            letter = data.get("letter")
+            if not game_id or not letter:
+                return
+            game_instance: Game | None = active_games.get(game_id)
+            if not game_instance:
+                return           
+            player_ids = [p["id"] for p in game_instance.game["players"]]
             #1) vérifier la lettre 
-            #2) si mauvaise 
-            # ===> game_instance.next_player_action()
-            # ===> game_instance.game["party"]["step"] = "choosing_wheel_value"
-            #2) si bonne
-            # ===> calcul du gain en fonction du nombre de lettres
-            #3) vérifier si le mot est complété ou non
-            #3) si pas complet
-            # ===> game_instance.game["party"]["step"] = "choosing_pendu_letter" de nouveau
-            #3) si complet
-            # on finit la manche et la partie pour le moment
+            idx_finded = [i for i, x in enumerate(list(game_instance.game["party"]["pendu"]["secret_word"])) if x == letter]
+            
+            if len(idx_finded) == 0:
+                message = {
+                    "success": False, 
+                    "message": "Mauvaise lettre", 
+                    "nbr_of_letter_found": 0,
+                    "code_error": 1,
+                    "word_completed": False
+                }
+                await broadcast(player_ids, {"type": "letter_result", **message})
+                #2) si mauvaise → passer au joueur suivant
+                game_instance.next_player_action()
+                game_instance.game["party"]["step"] = "choosing_wheel_value"
+                await broadcast(player_ids, {"type": "game_update", "game": game_instance.game})
+                return
 
-            pass
+            parsed_word_list = list(game_instance.game["party"]["pendu"]["parsed_word"])
+            for i in idx_finded:
+                if parsed_word_list[i] != "_":
+                    message = {
+                        "success": False, 
+                        "message": "Lettre déjà utilisée", 
+                        "nbr_of_letter_found": 0,
+                        "code_error": 2,
+                        "word_completed": False
+                    }
+                    await broadcast(player_ids, {"type": "letter_result", **message})
+                                   #2) si mauvaise → passer au joueur suivant
+                    game_instance.next_player_action()
+                    game_instance.game["party"]["step"] = "choosing_wheel_value"
+                    await broadcast(player_ids, {"type": "game_update", "game": game_instance.game})
+                    return
+                parsed_word_list[i] = letter
+
+            game_instance.game["party"]["pendu"]["parsed_word"] = "".join(parsed_word_list)
+            word_completed = "_" not in game_instance.game["party"]["pendu"]["parsed_word"]
+            message = {
+                "success": True, 
+                "message": "Bonne lettre", 
+                "nbr_of_letter_found": len(idx_finded),
+                "code_error": 0,
+                "word_completed": word_completed
+            }
+            current_player = next((p for p in game_instance.game["players"] if p["id"] == user_id), None)
+            if not current_player:
+                return
+            current_player["cagnotte"] += game_instance.game["party"]["current_gain"] * message["nbr_of_letter_found"]
+            # update cagnotte
+
+            await broadcast(player_ids, {"type": "letter_result", **message})
+
+            #3) vérifier si le mot est complété ou non
+            if not word_completed:
+                # pas complet → même joueur retourne à choosing_pendu_letter
+                game_instance.game["party"]["step"] = "choosing_wheel_value"
+            elif len(game_instance.game["manches"]) >= 3:
+                # 3ème manche terminée → fin de partie
+                game_instance.game["party"]["step"] = "game_over"
+            else:
+                # manche terminée mais pas la dernière → prochaine manche dans NEW_MANCHE_DELAY secondes
+                game_instance.game["party"]["step"] = "manche_completed"
+                game_instance.finish_manche()
+                asyncio.create_task(manche_delay(game_id))
+
+            await broadcast(player_ids, {"type": "game_update", "game": game_instance.game})
 
 
 

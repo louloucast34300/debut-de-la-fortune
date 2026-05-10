@@ -9,6 +9,7 @@ class Game:
                 "step":"",
                 "current_player": 0,
                 "current_gain": "",
+                "current_manche":0,
                 "wheel_gains": [50, 50, 100, 100, 200, 200, 300, 400, 500, 'banqueroot'],
                 "pendu": self.pendu.get_state()
             },
@@ -47,8 +48,17 @@ class Game:
 
     def add_manche(self,id):
         manche = Manche()
+        self.game["party"]["current_manche"] = id
+        self.pendu.define_split_word()
+        self.game["party"]["pendu"] = self.pendu.get_state()
         new_manche = manche.create_manche(id=id,word=self.game["party"]["pendu"]["secret_word"])
         self.game["manches"].append(new_manche)
+    
+    def finish_manche(self):
+        current_manche = next((p for p in self.game["manches"] if p["id"] == self.game["party"]["current_manche"]), None)
+        if not current_manche:
+            return
+        current_manche["status"] = "FINISHED"
 
     def turn_wheel(self):
         idx_chosen = random.randint(0,(len(self.game["party"]["wheel_gains"]) - 1))
@@ -56,7 +66,6 @@ class Game:
         self.game["party"]["current_gain"] = gain_chosen
 
     
-
     def define_started_player(self):
         idx_chosen = random.randint(0,(len(self.game["players"]) - 1))
         self.game["party"]["current_player"] = idx_chosen
@@ -84,7 +93,6 @@ class Game:
             parsed = {"joueur":player["name"], "cagnotte":player["cagnotte"]}
             arr.append(parsed)
         return arr
-
 
     def controller_round(self):
         # si joueur tombe sur banqueroot -> next
